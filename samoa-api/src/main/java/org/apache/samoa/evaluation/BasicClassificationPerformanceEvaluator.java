@@ -24,6 +24,8 @@ import org.apache.samoa.instances.Instance;
 import org.apache.samoa.instances.Utils;
 import org.apache.samoa.moa.AbstractMOAObject;
 import org.apache.samoa.moa.core.Measurement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Classification evaluator that performs basic incremental evaluation.
@@ -80,6 +82,7 @@ public class BasicClassificationPerformanceEvaluator extends AbstractMOAObject i
       }
       this.weightObserved += weight;
       int predictedClass = Utils.maxIndex(classVotes);
+
       if (predictedClass == trueClass) {
         this.weightCorrect += weight;
       }
@@ -114,6 +117,7 @@ public class BasicClassificationPerformanceEvaluator extends AbstractMOAObject i
   public double getTotalWeightObserved() {
     return this.weightObserved;
   }
+
 
   public double getFractionCorrectlyClassified() {
     return this.weightObserved > 0.0 ? this.weightCorrect

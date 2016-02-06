@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import com.github.javacliparser.ClassOption;
 import com.github.javacliparser.Configurable;
 import com.github.javacliparser.FileOption;
+import com.github.javacliparser.FlagOption;
 import com.github.javacliparser.FloatOption;
 import com.github.javacliparser.IntOption;
 import com.github.javacliparser.StringOption;
@@ -83,6 +84,10 @@ public class ClusteringEvaluation implements Task, Configurable {
 
   public FileOption dumpFileOption = new FileOption("dumpFile", 'd', "File to append intermediate csv results to",
       null, "csv", true);
+
+  public FlagOption dumpPerInstanceOption = new FlagOption("dumpPerInstance", 'z', "Dump per instance results to file.");
+
+  public FlagOption outputPerInstanceOption = new FlagOption("ouputPerInstance", 'x', "Output to console per instance results.");
 
   public FloatOption samplingThresholdOption = new FloatOption("samplingThreshold", 'a',
       "Ratio of instances sampled that will be used for evaluation.", 0.5,
@@ -155,6 +160,7 @@ public class ClusteringEvaluation implements Task, Configurable {
 
     evaluator = new ClusteringEvaluatorProcessor.Builder(
         sampleFrequencyOption.getValue()).dumpFile(dumpFileOption.getFile())
+        .dumpPerInstance(dumpPerInstanceOption.isSet()).outputPerInstance(outputPerInstanceOption.isSet())
         .decayHorizon(((ClusteringStream) streamTrain).getDecayHorizon()).build();
 
     builder.addProcessor(evaluator);

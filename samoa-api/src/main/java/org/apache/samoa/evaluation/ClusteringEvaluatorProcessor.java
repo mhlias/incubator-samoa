@@ -34,6 +34,7 @@ import org.apache.samoa.evaluation.measures.SSQ;
 import org.apache.samoa.evaluation.measures.StatisticalCollection;
 import org.apache.samoa.moa.cluster.Clustering;
 import org.apache.samoa.moa.clusterers.KMeans;
+import org.apache.samoa.instances.Utils;
 import org.apache.samoa.moa.core.DataPoint;
 import org.apache.samoa.moa.core.Measurement;
 import org.apache.samoa.moa.evaluation.LearningCurve;
@@ -56,6 +57,8 @@ public class ClusteringEvaluatorProcessor implements Processor {
   private final int samplingFrequency;
   private final int decayHorizon;
   private final File dumpFile;
+  private final boolean dumpPerInstance;
+  private final boolean outputPerInstance;
   private transient PrintStream immediateResultStream = null;
   private transient boolean firstDump = true;
 
@@ -75,6 +78,8 @@ public class ClusteringEvaluatorProcessor implements Processor {
   private ClusteringEvaluatorProcessor(Builder builder) {
     this.samplingFrequency = builder.samplingFrequency;
     this.dumpFile = builder.dumpFile;
+    this.dumpPerInstance = builder.dumpPerInstance;
+    this.outputPerInstance = builder.outputPerInstance;
     this.points = new ArrayList<>();
     this.decayHorizon = builder.decayHorizon;
   }
@@ -103,6 +108,13 @@ public class ClusteringEvaluatorProcessor implements Processor {
     }
 
     this.addMeasurement();
+
+    // send instance measurement to file if dumpPerInstance set to true 
+    /*
+    if (dumpPerInstance || outputPerInstance) {
+      int predictedClass = Utils.maxIndex(result.getClustering());
+      this.addInstanceMeasurement(totalCount+1, predictedClass);
+    }*/
 
     if (result.isLastEvent()) {
       this.concludeMeasurement();
@@ -242,6 +254,30 @@ public class ClusteringEvaluatorProcessor implements Processor {
     }
   }
 
+  private void addInstanceMeasurement(long instanceId, int instanceClass) {
+
+    if (immediateResultStream != null) {
+
+      if (firstDump) {
+        immediateResultStream.println(learningCurve.headerToString());
+        firstDump = false;
+      }
+
+      // add dump to file per instance code here
+      if (dumpPerInstance) {
+        String line = String.format("Instance: %d Classified as: %d", instanceId, instanceClass);
+        immediateResultStream.println(line);
+        immediateResultStream.flush();
+      }
+
+      if (outputPerInstance) {
+        logger.info("Instance: {} Classified as: {}", instanceId, instanceClass);
+      }
+
+    }
+
+  }
+
   private void addClusteringPerformanceMeasurements(List<Measurement> measurements) {
     for (MeasureCollection measure : measures) {
       for (int j = 0; j < measure.getNumMeasures(); j++) {
@@ -287,6 +323,8 @@ public class ClusteringEvaluatorProcessor implements Processor {
     private int samplingFrequency = 1000;
     private File dumpFile = null;
     private int decayHorizon = 1000;
+    private boolean dumpPerInstance = false;
+    private boolean outputPerInstance = false;
 
     public Builder(int samplingFrequency) {
       this.samplingFrequency = samplingFrequency;
@@ -310,6 +348,16 @@ public class ClusteringEvaluatorProcessor implements Processor {
 
     public Builder dumpFile(File file) {
       this.dumpFile = file;
+      return this;
+    }
+
+    public Builder dumpPerInstance(boolean perInstance) {
+      this.dumpPerInstance = perInstance;
+      return this;
+    }
+
+    public Builder outputPerInstance(boolean perInstance) {
+      this.outputPerInstance = perInstance;
       return this;
     }
 

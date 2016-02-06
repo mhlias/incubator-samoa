@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.samoa.core.ContentEvent;
 import org.apache.samoa.core.Processor;
+import org.apache.samoa.instances.Utils;
 import org.apache.samoa.learners.ResultContentEvent;
 import org.apache.samoa.moa.core.Measurement;
 import org.apache.samoa.moa.evaluation.LearningCurve;
@@ -53,6 +54,8 @@ public class EvaluatorProcessor implements Processor {
   private final PerformanceEvaluator evaluator;
   private final int samplingFrequency;
   private final File dumpFile;
+  private final boolean dumpPerInstance;
+  private final boolean outputPerInstance;
   private transient PrintStream immediateResultStream = null;
   private transient boolean firstDump = true;
 
@@ -68,6 +71,8 @@ public class EvaluatorProcessor implements Processor {
     this.evaluator = builder.evaluator;
     this.samplingFrequency = builder.samplingFrequency;
     this.dumpFile = builder.dumpFile;
+    this.dumpPerInstance = builder.dumpPerInstance;
+    this.outputPerInstance = builder.outputPerInstance;
   }
 
   @Override
@@ -84,12 +89,19 @@ public class EvaluatorProcessor implements Processor {
       this.addMeasurement();
     }
 
+    // send instance measurement to file if dumpPerInstance set to true 
+    if (dumpPerInstance || outputPerInstance) {
+      int predictedClass = Utils.maxIndex(result.getClassVotes());
+      this.addInstanceMeasurement(totalCount+1, predictedClass);
+    }
+
     if (result.isLastEvent()) {
       this.concludeMeasurement();
       return true;
     }
 
     evaluator.addResult(result.getInstance(), result.getClassVotes());
+
     totalCount += 1;
 
     if (totalCount == 1) {
@@ -169,6 +181,7 @@ public class EvaluatorProcessor implements Processor {
     logger.info(learningEvaluation.toString());
 
     if (immediateResultStream != null) {
+
       if (firstDump) {
         immediateResultStream.println(learningCurve.headerToString());
         firstDump = false;
@@ -179,10 +192,36 @@ public class EvaluatorProcessor implements Processor {
     }
   }
 
+
+  private void addInstanceMeasurement(long instanceId, int instanceClass) {
+
+    if (immediateResultStream != null) {
+
+      if (firstDump) {
+        immediateResultStream.println(learningCurve.headerToString());
+        firstDump = false;
+      }
+
+      // add dump to file per instance code here
+      if (dumpPerInstance) {
+        String line = String.format("Instance: %d Classified as: %d", instanceId, instanceClass);
+        immediateResultStream.println(line);
+        immediateResultStream.flush();
+      }
+
+    }
+
+    if (outputPerInstance) {
+      logger.info("Instance: {} Classified as: {}", instanceId, instanceClass);
+    }
+
+  }
+
   private void concludeMeasurement() {
     logger.info("last event is received!");
     logger.info("total count: {}", this.totalCount);
 
+    
     String learningCurveSummary = this.toString();
     logger.info(learningCurveSummary);
 
@@ -190,10 +229,15 @@ public class EvaluatorProcessor implements Processor {
     long totalExperimentTime = TimeUnit.SECONDS.convert(experimentEnd - experimentStart, TimeUnit.NANOSECONDS);
     logger.info("total evaluation time: {} seconds for {} instances", totalExperimentTime, totalCount);
 
+    // Dump to file concludes here
+
     if (immediateResultStream != null) {
       immediateResultStream.println("# COMPLETED");
       immediateResultStream.flush();
     }
+
+
+
     // logger.info("average throughput rate: {} instances/seconds",
     // (totalCount/totalExperimentTime));
   }
@@ -203,6 +247,8 @@ public class EvaluatorProcessor implements Processor {
     private final PerformanceEvaluator evaluator;
     private int samplingFrequency = 100000;
     private File dumpFile = null;
+    private boolean dumpPerInstance = false;
+    private boolean outputPerInstance = false;
 
     public Builder(PerformanceEvaluator evaluator) {
       this.evaluator = evaluator;
@@ -212,6 +258,8 @@ public class EvaluatorProcessor implements Processor {
       this.evaluator = oldProcessor.evaluator;
       this.samplingFrequency = oldProcessor.samplingFrequency;
       this.dumpFile = oldProcessor.dumpFile;
+      this.dumpPerInstance = oldProcessor.dumpPerInstance;
+      this.outputPerInstance = oldProcessor.outputPerInstance;
     }
 
     public Builder samplingFrequency(int samplingFrequency) {
@@ -221,6 +269,16 @@ public class EvaluatorProcessor implements Processor {
 
     public Builder dumpFile(File file) {
       this.dumpFile = file;
+      return this;
+    }
+
+    public Builder dumpPerInstance(boolean perInstance) {
+      this.dumpPerInstance = perInstance;
+      return this;
+    }
+
+    public Builder outputPerInstance(boolean perInstance) {
+      this.outputPerInstance = perInstance;
       return this;
     }
 

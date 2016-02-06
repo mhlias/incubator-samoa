@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import com.github.javacliparser.ClassOption;
 import com.github.javacliparser.Configurable;
 import com.github.javacliparser.FileOption;
+import com.github.javacliparser.FlagOption;
 import com.github.javacliparser.IntOption;
 import com.github.javacliparser.StringOption;
 
@@ -90,6 +91,10 @@ public class PrequentialEvaluation implements Task, Configurable {
 
   public FileOption dumpFileOption = new FileOption("dumpFile", 'd', "File to append intermediate csv results to",
       null, "csv", true);
+
+  public FlagOption dumpPerInstanceOption = new FlagOption("dumpPerInstance", 'z', "Dump per instance results to file.");
+
+  public FlagOption outputPerInstanceOption = new FlagOption("ouputPerInstance", 'x', "Output to console per instance results.");
 
   // Default=0: no delay/waiting
   public IntOption sourceDelayOption = new IntOption("sourceDelay", 'w',
@@ -166,8 +171,12 @@ public class PrequentialEvaluation implements Task, Configurable {
     if (!PrequentialEvaluation.isLearnerAndEvaluatorCompatible(classifier, evaluatorOptionValue)) {
       evaluatorOptionValue = getDefaultPerformanceEvaluatorForLearner(classifier);
     }
+
+    // Add extra per instance options here
+
     evaluator = new EvaluatorProcessor.Builder(evaluatorOptionValue)
-        .samplingFrequency(sampleFrequencyOption.getValue()).dumpFile(dumpFileOption.getFile()).build();
+        .samplingFrequency(sampleFrequencyOption.getValue()).dumpFile(dumpFileOption.getFile())
+        .dumpPerInstance(dumpPerInstanceOption.isSet()).outputPerInstance(outputPerInstanceOption.isSet()).build();
 
     // evaluatorPi = builder.createPi(evaluator);
     // evaluatorPi.connectInputShuffleStream(evaluatorPiInputStream);
